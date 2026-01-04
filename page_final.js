@@ -81,6 +81,7 @@
         try {
           return await origWriteText(cleanAll(text));
         } catch (e) {
+          console.error("[Copy Cleaner] writeText patch error:", e);
           return await origWriteText(text);
         }
       };
@@ -123,7 +124,9 @@
 
           return await origWrite(cleanedItems);
         } catch (e) {
-          return await origWrite(items);
+          console.error("[Copy Cleaner] Initial patch error:", e);
+          // Re-throw the original error to get a cleaner stack trace.
+          throw e;
         }
       };
     }

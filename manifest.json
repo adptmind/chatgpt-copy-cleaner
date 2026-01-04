@@ -3,7 +3,10 @@
   "name": "ChatGPT Copy Cleaner",
   "version": "1.0.0",
   "description": "Cleans copied ChatGPT text by removing citation links, reference markers, and tracking parameters.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting"],
+  "background": {
+    "scripts": ["background.js"]
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "chatgpt-copy-cleaner@example.com",
@@ -29,13 +32,7 @@
     {
       "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
       "js": ["content.js"],
-      "run_at": "document_start"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["page_final.js"],
-      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"]
+      "run_at": "document_idle"
     }
   ]
 }
