@@ -2,6 +2,15 @@
   "use strict";
 
   const HOOK_EVENT = "__chatgpt_copy_cleaner_hooked__";
+  const STATE_UPDATE_EVENT = "__chatgpt_copy_cleaner_state_update__";
+  let isExtensionEnabled = true;
+
+  // Listen for state updates from the content script
+  window.addEventListener(STATE_UPDATE_EVENT, (e) => {
+    if (typeof e.detail?.enabled === 'boolean') {
+      isExtensionEnabled = e.detail.enabled;
+    }
+  });
 
   const escapeHtml = (s) => String(s)
     .replace(/&/g, "&amp;")
@@ -20,7 +29,7 @@
     let t = String(text ?? "");
 
     // ChatGPT special cite markers (sometimes appear in copied output)
-    t = t.replace(/\s*cite[^]+\uE001/g, "");
+    t = t.replace(/\s*cite[^]+/g, "");
 
     // Reference definitions: [1]: https://... OR [Label]: https://...
     t = t.replace(/^\s*\[[^\]]+\]:\s*\S+.*$/gm, "");
@@ -32,7 +41,7 @@
     t = t.replace(/\<img[^\>]*src=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>/gi, "$2");
     t = t.replace(/\<[^>]+>([^\<]*?)\<\/[^>]+>/gi, "$1");
     t = t.replace(/\<[^>]+\>/gi, "");
-    t = t.replace(/\\\[([^\\\]]+)\\\]\((?:https?:\/\/|www\.)[^)]+\)/gi, "$1");
+    t = t.replace(/\\[^\\\]+\\]\((?:https?:\/\/|www\.)[^)]+\)/gi, "$1");
 
     // Reference-style markdown links: [label][anything] -> label
     t = t.replace(/\<span[^\>]*\>([^\<]*?)\<\/span\>/gi, "$1");
@@ -41,10 +50,10 @@
     t = t.replace(/\<img[^\>]*src=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>/gi, "$2");
     t = t.replace(/\<[^>]+>([^\<]*?)\<\/[^>]+>/gi, "$1");
     t = t.replace(/\<[^>]+\>/gi, "");
-    t = t.replace(/\\\[([^\\\]]+)\\\]\[[^\\\]]+\]/g, "$1");
+    t = t.replace(/\\[^\\\]+\]\[[^\]]+\]/g, "$1");
 
     // Parenthesized reference: ([Title][1]) plus arrow notes
-    t = t.replace(/\s*\(\[[^\]]+\]\[[^\]]+\]\)\s*(?:<-+.*)?/g, "");
+    t = t.replace(/\s*\(\[[^\]]+\]\[[^\].]+\]\)\s*(?:<\-+.*)?/g, "");
 
     // Bare bracket markers leftover: [1], [Source]
     t = t.replace(/\s*\[[^\]]+\]/g, "");
@@ -78,11 +87,15 @@
     if (typeof clipboard.writeText === "function") {
       const origWriteText = clipboard.writeText.bind(clipboard);
       clipboard.writeText = async (text) => {
+        if (!isExtensionEnabled) {
+          return await origWriteText(text);
+        }
         try {
           return await origWriteText(cleanAll(text));
         } catch (e) {
-          console.error("[Copy Cleaner] writeText patch error:", e);
-          return await origWriteText(text);
+          console.error("[Copy Cleaner] Initial patch error:", e);
+          // Re-throw the original error to get a cleaner stack trace.
+          throw e;
         }
       };
     }
@@ -91,6 +104,9 @@
     if (typeof clipboard.write === "function" && typeof ClipboardItem !== "undefined") {
       const origWrite = clipboard.write.bind(clipboard);
       clipboard.write = async (items) => {
+        if (!isExtensionEnabled) {
+          return await origWrite(items);
+        }
         try {
           if (!Array.isArray(items)) return await origWrite(items);
 

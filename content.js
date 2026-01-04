@@ -5,6 +5,42 @@
   const PROTECT_CODE_BLOCKS = false;
 
   const browserAPI = typeof browser !== "undefined" ? browser : chrome;
+  const storage = browserAPI.storage.sync || browserAPI.storage.local;
+
+  const HOOK_EVENT = "__chatgpt_copy_cleaner_hooked__";
+  const STATE_UPDATE_EVENT = "__chatgpt_copy_cleaner_state_update__";
+
+  let isEnabled = true; // Local cache of the extension's enabled state.
+
+  // --- State Management ---
+
+  /**
+   * Dispatches the current enabled/disabled state to the main-world script.
+   */
+  function dispatchStateUpdate() {
+    window.dispatchEvent(new CustomEvent(STATE_UPDATE_EVENT, {
+      detail: { enabled: isEnabled }
+    }));
+  }
+
+  // 1. Load initial state from storage.
+  storage.get({ enabled: true }, (settings) => {
+    isEnabled = settings.enabled;
+    // It's possible the page script isn't injected yet. We'll dispatch the
+    // state again after we get confirmation that the hook is active.
+    dispatchStateUpdate();
+  });
+
+  // 2. Listen for changes from the popup's settings toggle.
+  browserAPI.storage.onChanged.addListener((changes, area) => {
+    if (area.startsWith("sync") || area.startsWith("local")) {
+        if (changes.enabled) {
+            isEnabled = changes.enabled.newValue;
+            dispatchStateUpdate();
+        }
+    }
+  });
+
 
   // --- Cleaner logic (for selection copy) ---
   function cleanAll(text) {
@@ -47,7 +83,6 @@
   }
 
   // --- Selection copy (Ctrl/Cmd-C) Handler ---
-  // This remains in the content script as it's the most direct way to handle this DOM event.
   function closestElement(node) {
     if (!node) return null;
     return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
@@ -64,6 +99,9 @@
   document.addEventListener(
     "copy",
     (e) => {
+      // Respect the enabled/disabled state for selection copy too.
+      if (!isEnabled) return;
+
       const sel = window.getSelection?.();
       if (!sel || sel.isCollapsed) return;
       if (!selectionIsInAssistant(sel)) return;
@@ -106,13 +144,14 @@
   }
 
   // --- Trigger background script injection and listen for confirmation ---
-  const HOOK_EVENT = "__chatgpt_copy_cleaner_hooked__";
 
   // 1. Listen for the confirmation event from the injected script
   window.addEventListener(HOOK_EVENT, (e) => {
     if (e.detail?.ok) {
       console.log("[Copy Cleaner] Main-world script hook confirmed.");
       showToast("Copy Cleaner: hook active", true);
+      // The hook is now active, so we ensure it has the latest state.
+      dispatchStateUpdate();
     } else {
       console.error("[Copy Cleaner] Main-world script failed to hook:", e.detail);
       showToast("Copy Cleaner: hook failed (see console)", false);
