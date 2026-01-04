@@ -2,15 +2,21 @@
   "use strict";
 
   const HOOK_EVENT = "__chatgpt_copy_cleaner_hooked__";
-  const STATE_UPDATE_EVENT = "__chatgpt_copy_cleaner_state_update__";
   let isExtensionEnabled = true;
 
-  // Listen for state updates from the content script
-  window.addEventListener(STATE_UPDATE_EVENT, (e) => {
-    if (typeof e.detail?.enabled === 'boolean') {
-      isExtensionEnabled = e.detail.enabled;
+  // Listen for state updates from the content script via postMessage
+  window.addEventListener('message', (event) => {
+    // We only accept messages from ourselves
+    if (event.source !== window) {
+      return;
     }
-  });
+
+    const data = event.data;
+    // Check for our specific message type and payload
+    if (data?.type === 'CLEANER_STATE_UPDATE' && typeof data.payload?.enabled === 'boolean') {
+      isExtensionEnabled = data.payload.enabled;
+    }
+  }, false);
 
   const escapeHtml = (s) => String(s)
     .replace(/&/g, "&amp;")

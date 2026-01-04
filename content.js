@@ -8,28 +8,27 @@
   const storage = browserAPI.storage.sync || browserAPI.storage.local;
 
   const HOOK_EVENT = "__chatgpt_copy_cleaner_hooked__";
-  const STATE_UPDATE_EVENT = "__chatgpt_copy_cleaner_state_update__";
 
   let isEnabled = true; // Local cache of the extension's enabled state.
 
   // --- State Management ---
 
   /**
-   * Dispatches the current enabled/disabled state to the main-world script.
+   * Dispatches the current enabled/disabled state to the main-world script via postMessage.
    */
   function dispatchStateUpdate() {
-    console.log('[Copy Cleaner] Dispatching state update event:', { isEnabled });
-    window.dispatchEvent(new CustomEvent(STATE_UPDATE_EVENT, {
-      detail: { enabled: isEnabled }
-    }));
+    window.postMessage({
+      type: 'CLEANER_STATE_UPDATE',
+      payload: {
+        enabled: isEnabled
+      }
+    }, window.location.origin);
   }
 
   // 1. Load initial state from storage.
   storage.get({ enabled: true }, (settings) => {
     isEnabled = settings.enabled;
-    console.log('[Copy Cleaner] Initial state loaded from storage:', { isEnabled });
-    // It's possible the page script isn't injected yet. We'll dispatch the
-    // state again after we get confirmation that the hook is active.
+    // Dispatch state immediately, and again after hook confirmation for robustness.
     dispatchStateUpdate();
   });
 
@@ -38,7 +37,6 @@
     if (area.startsWith("sync") || area.startsWith("local")) {
         if (changes.enabled) {
             isEnabled = changes.enabled.newValue;
-            console.log('[Copy Cleaner] Detected state change in storage:', { isEnabled });
             dispatchStateUpdate();
         }
     }
