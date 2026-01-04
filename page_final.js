@@ -35,25 +35,13 @@
     t = t.replace(/^\s*\[[^\]]+\]:\s*\S+.*$/gm, "");
 
     // Inline markdown links: [label](url) -> label
-    t = t.replace(/\<span[^\>]*\>([^\<]*?)\<\/span\>/gi, "$1");
-    t = t.replace(/\<a[^\>]*href=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>([^\<]*?)\<\/a\>/gi, "$3");
-    t = t.replace(/\<img[^\>]*alt=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>/gi, "$2");
-    t = t.replace(/\<img[^\>]*src=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>/gi, "$2");
-    t = t.replace(/\<[^>]+>([^\<]*?)\<\/[^>]+>/gi, "$1");
-    t = t.replace(/\<[^>]+\>/gi, "");
-    t = t.replace(/\\[^\\\]+\\]\((?:https?:\/\/|www\.)[^)]+\)/gi, "$1");
+    t = t.replace(/\[([^\]]+)\]\((?:https?:\/\/|www\.)[^)]+\)/gi, "$1");
 
     // Reference-style markdown links: [label][anything] -> label
-    t = t.replace(/\<span[^\>]*\>([^\<]*?)\<\/span\>/gi, "$1");
-    t = t.replace(/\<a[^\>]*href=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>([^\<]*?)\<\/a\>/gi, "$3");
-    t = t.replace(/\<img[^\>]*alt=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>/gi, "$2");
-    t = t.replace(/\<img[^\>]*src=\s*(["\']?)([^"\'\s>]+)\1[^>]*\>/gi, "$2");
-    t = t.replace(/\<[^>]+>([^\<]*?)\<\/[^>]+>/gi, "$1");
-    t = t.replace(/\<[^>]+\>/gi, "");
-    t = t.replace(/\\[^\\\]+\]\[[^\]]+\]/g, "$1");
+    t = t.replace(/\[([^\]]+)\]\[[^\]]+\]/g, "$1");
 
     // Parenthesized reference: ([Title][1]) plus arrow notes
-    t = t.replace(/\s*\(\[[^\]]+\]\[[^\].]+\]\)\s*(?:<\-+.*)?/g, "");
+    t = t.replace(/\s*\(\[[^\]]+\]\[[^\]]+\]\)\s*(?:<-+.*)?/g, "");
 
     // Bare bracket markers leftover: [1], [Source]
     t = t.replace(/\s*\[[^\]]+\]/g, "");

@@ -18,6 +18,7 @@
    * Dispatches the current enabled/disabled state to the main-world script.
    */
   function dispatchStateUpdate() {
+    console.log('[Copy Cleaner] Dispatching state update event:', { isEnabled });
     window.dispatchEvent(new CustomEvent(STATE_UPDATE_EVENT, {
       detail: { enabled: isEnabled }
     }));
@@ -26,6 +27,7 @@
   // 1. Load initial state from storage.
   storage.get({ enabled: true }, (settings) => {
     isEnabled = settings.enabled;
+    console.log('[Copy Cleaner] Initial state loaded from storage:', { isEnabled });
     // It's possible the page script isn't injected yet. We'll dispatch the
     // state again after we get confirmation that the hook is active.
     dispatchStateUpdate();
@@ -36,6 +38,7 @@
     if (area.startsWith("sync") || area.startsWith("local")) {
         if (changes.enabled) {
             isEnabled = changes.enabled.newValue;
+            console.log('[Copy Cleaner] Detected state change in storage:', { isEnabled });
             dispatchStateUpdate();
         }
     }
